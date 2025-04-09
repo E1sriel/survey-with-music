@@ -7,12 +7,8 @@
     <link rel="stylesheet" href="css/style.css">
     <link rel="icon" href="data:,">
     <style>
-        /* 统一播放控件样式 */
-        #mobile-controls {
-            display: none;
-            margin-top: 10px;
-            gap: 10px;
-        }
+        /* 统一控件隐藏逻辑 */
+        #mobile-controls { display: none; }
         @media (max-width: 768px) {
             #mobile-controls { display: flex; }
             #native-controls { display: none; }
@@ -46,78 +42,69 @@
     </div>
 
     <script>
-        // 跨平台音频控制器
-        const audioController = (() => {
-            const audio = new Audio();
-            let isUserInteracted = false;
+        // 强化版音频控制器
+        const audioManager = {
+            audio: new Audio(),
+            isDesktop: !/Mobi|Android/i.test(navigator.userAgent),
+            hasInteracted: false,
             
-            // 初始化音频设置
-            audio.controls = false;
-            audio.loop = true;
-            
-            // 用户交互检测
-            document.addEventListener('click', () => {
-                isUserInteracted = true;
-            }, { once: true });
+            init() {
+                this.audio.controls = this.isDesktop;
+                this.audio.loop = true;
+                
+                // 全局交互检测
+                document.addEventListener('click', () => {
+                    this.hasInteracted = true;
+                }, { once: true });
 
-            return {
-                load: function(url) {
-                    audio.pause();
-                    audio.src = url;
-                },
-                play: function() {
-                    if (isUserInteracted) {
-                        return audio.play().catch(e => {
-                            console.log('播放需要用户交互');
-                        });
-                    }
-                    return Promise.reject();
-                },
-                pause: function() {
-                    audio.pause();
-                },
-                get element() {
-                    return audio;
+                // 音乐切换处理
+                document.getElementById('music-selector').addEventListener('change', e => {
+                    this.handleMusicChange(e.target.value);
+                });
+
+                // 桌面端播放控制
+                if (this.isDesktop) {
+                    this.audio.addEventListener('play', () => {
+                        if (!this.hasInteracted) this.audio.pause();
+                    });
                 }
-            };
-        })();
 
-        // 设备检测
-        const isMobile = /Mobi|Android/i.test(navigator.userAgent);
-        
-        // 初始化界面
-        document.getElementById('native-controls').replaceWith(audioController.element);
-        
-        // 音乐加载逻辑
-        document.getElementById('music-selector').addEventListener('change', e => {
-            if (!e.target.value) return;
+                // 移动端控制绑定
+                document.getElementById('play-btn').addEventListener('click', () => this.play());
+                document.getElementById('pause-btn').addEventListener('click', () => this.pause());
+            },
             
-            const filename = encodeURIComponent(e.target.value);
-            audioController.load(`assets/music/${filename}`);
-            document.getElementById('song-title').textContent = 
-                `当前播放：${e.target.value.split(' - ')[1].replace('.mp3', '')}`;
+            handleMusicChange(filename) {
+                if (!filename) return;
+                
+                this.audio.pause();
+                this.audio.src = `assets/music/${encodeURIComponent(filename)}`;
+                this.updateDisplay(filename);
+                
+                // 桌面端智能播放
+                if (this.isDesktop && this.hasInteracted) {
+                    this.play().catch(() => {});
+                }
+            },
             
-            // 桌面端自动播放(仅在用户已交互时)
-            if (!isMobile) {
-                audioController.play();
+            updateDisplay(filename) {
+                const name = filename.split(' - ')[1]?.replace('.mp3', '') || filename;
+                document.getElementById('song-title').textContent = `当前播放：${name}`;
+            },
+            
+            play() {
+                return this.audio.play().catch(e => {
+                    if (this.isDesktop) console.log('需要用户点击页面任意位置后才可播放');
+                });
+            },
+            
+            pause() {
+                this.audio.pause();
             }
-        });
+        };
 
-        // 移动端控制绑定
-        document.getElementById('play-btn').addEventListener('click', () => {
-            audioController.play().then(() => {
-                audioController.element.dispatchEvent(new Event('play'));
-            });
-        });
-        
-        document.getElementById('pause-btn').addEventListener('click', () => {
-            audioController.pause();
-        });
-
-        // 统一播放状态同步
-        audioController.element.addEventListener('play', () => {
-            document.getElementById('mobile-controls').style.display = 'flex';
-        });
+        // 初始化音频系统
+        audioManager.init();
     </script>
 </body>
 </html>
