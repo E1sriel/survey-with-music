@@ -49,43 +49,50 @@
     </div>
 
     <script>
+        // 核心修复部分
         const audioPlayer = document.getElementById('audio-player');
         const musicSelector = document.getElementById('music-selector');
 
         // 初始化加载第一个音乐
-        audioPlayer.src = musicSelector.value;
-        audioPlayer.play();
+        function initPlayer() {
+            const firstMusic = musicSelector.options[0].value;
+            audioPlayer.src = firstMusic;
+            updateSongTitle(firstMusic);
+            audioPlayer.play();
+        }
 
-        // 文件名处理函数
-        function extractFilename(src) {
-            return decodeURIComponent(src.split('/').pop().replace('.mp3', ''));
+        // 解码文件名（修复乱码问题）
+        function decodeFileName(src) {
+            return decodeURIComponent(src)                 // 解码完整URL
+                    .split('/').pop()                       // 获取文件名
+                    .replace('.mp3', '')                    // 去除扩展名
+                    .replace(/(^\S+\s-\s)/, '');            // 去除艺术家前缀
         }
 
         // 更新歌曲标题
         function updateSongTitle(src) {
             document.getElementById('song-title').textContent = 
-                `当前播放：${extractFilename(src)}`;
+                `当前播放：${decodeFileName(src)}`;
         }
 
-        // 切换音乐
+        // 切换音乐功能
         function changeMusic() {
             const newSrc = musicSelector.value;
             audioPlayer.pause();
             audioPlayer.src = newSrc;
             audioPlayer.load();
+            updateSongTitle(newSrc); // 立即更新标题
             audioPlayer.play();
-            updateSongTitle(newSrc);
         }
 
         // 事件监听
         musicSelector.addEventListener('change', changeMusic);
         audioPlayer.addEventListener('loadedmetadata', () => {
-            updateSongTitle(audioPlayer.src);
+            updateSongTitle(audioPlayer.src); // 双重保障更新标题
         });
-        audioPlayer.addEventListener('ended', () => {
-            audioPlayer.currentTime = 0;
-            audioPlayer.play();
-        });
+
+        // 初始化执行
+        initPlayer();
     </script>
 </body>
 </html>
