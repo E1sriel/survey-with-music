@@ -7,7 +7,7 @@
     <link rel="stylesheet" href="css/style.css">
     <link rel="icon" href="data:,">
     <style>
-        /* 新增移动端播放控件 */
+        /* 统一播放控件样式 */
         #mobile-controls {
             display: none;
             margin-top: 10px;
@@ -15,7 +15,7 @@
         }
         @media (max-width: 768px) {
             #mobile-controls { display: flex; }
-            audio::-webkit-media-controls { display: none; }
+            #native-controls { display: none; }
         }
     </style>
 </head>
@@ -37,81 +37,87 @@
             <option value="凤凰院零零 - Tyndall effect (丁达尔效应).mp3">丁达尔效应</option>
         </select>
         
-        <!-- 新增移动端控制按钮 -->
+        <!-- 平台自适应控件 -->
         <div id="mobile-controls">
             <button id="play-btn">▶️ 播放</button>
             <button id="pause-btn">⏸️ 暂停</button>
         </div>
-        
-        <audio id="audio-player" controls></audio>
+        <audio id="native-controls" controls></audio>
     </div>
 
     <script>
-        // 全局音频管理
-        const audioManager = {
-            currentAudio: null,
-            isMobile: /Mobi|Android/i.test(navigator.userAgent),
+        // 跨平台音频控制器
+        const audioController = (() => {
+            const audio = new Audio();
+            let isUserInteracted = false;
             
-            init: function() {
-                this.createAudioElement();
-                this.bindEvents();
-            },
+            // 初始化音频设置
+            audio.controls = false;
+            audio.loop = true;
             
-            createAudioElement: function() {
-                if (this.currentAudio) {
-                    this.currentAudio.pause();
-                    this.currentAudio.remove();
-                }
-                this.currentAudio = new Audio();
-                this.currentAudio.loop = true;
-                this.currentAudio.controls = !this.isMobile;
-                document.getElementById('audio-player').replaceWith(this.currentAudio);
-            },
-            
-            load: function(filename) {
-                if (!filename) return;
-                
-                this.createAudioElement();
-                const path = `assets/music/${encodeURIComponent(filename)}`;
-                this.currentAudio.src = path;
-                
-                // 更新显示信息
-                const displayName = filename.split(' - ')[1]?.replace('.mp3', '') || filename;
-                document.getElementById('song-title').textContent = `当前播放：${displayName}`;
-                
-                // 移动端显示自定义控件
-                if (this.isMobile) {
-                    this.currentAudio.style.display = 'none';
-                    document.getElementById('mobile-controls').style.display = 'flex';
-                }
-            },
-            
-            bindEvents: function() {
-                // 音乐切换
-                document.getElementById('music-selector').addEventListener('change', e => {
-                    this.load(e.target.value);
-                });
-                
-                // 自定义播放控制
-                document.getElementById('play-btn').addEventListener('click', () => {
-                    this.currentAudio.play();
-                });
-                document.getElementById('pause-btn').addEventListener('click', () => {
-                    this.currentAudio.pause();
-                });
-                
-                // 阻止自动播放
-                this.currentAudio.addEventListener('play', () => {
-                    if (!document.querySelector('#music-player').matches(':hover')) {
-                        this.currentAudio.pause();
-                    }
-                });
-            }
-        };
+            // 用户交互检测
+            document.addEventListener('click', () => {
+                isUserInteracted = true;
+            }, { once: true });
 
-        // 初始化（不自动播放）
-        audioManager.init();
-        document.getElementById('music-selector').value = '';
+            return {
+                load: function(url) {
+                    audio.pause();
+                    audio.src = url;
+                },
+                play: function() {
+                    if (isUserInteracted) {
+                        return audio.play().catch(e => {
+                            console.log('播放需要用户交互');
+                        });
+                    }
+                    return Promise.reject();
+                },
+                pause: function() {
+                    audio.pause();
+                },
+                get element() {
+                    return audio;
+                }
+            };
+        })();
+
+        // 设备检测
+        const isMobile = /Mobi|Android/i.test(navigator.userAgent);
+        
+        // 初始化界面
+        document.getElementById('native-controls').replaceWith(audioController.element);
+        
+        // 音乐加载逻辑
+        document.getElementById('music-selector').addEventListener('change', e => {
+            if (!e.target.value) return;
+            
+            const filename = encodeURIComponent(e.target.value);
+            audioController.load(`assets/music/${filename}`);
+            document.getElementById('song-title').textContent = 
+                `当前播放：${e.target.value.split(' - ')[1].replace('.mp3', '')}`;
+            
+            // 桌面端自动播放(仅在用户已交互时)
+            if (!isMobile) {
+                audioController.play();
+            }
+        });
+
+        // 移动端控制绑定
+        document.getElementById('play-btn').addEventListener('click', () => {
+            audioController.play().then(() => {
+                audioController.element.dispatchEvent(new Event('play'));
+            });
+        });
+        
+        document.getElementById('pause-btn').addEventListener('click', () => {
+            audioController.pause();
+        });
+
+        // 统一播放状态同步
+        audioController.element.addEventListener('play', () => {
+            document.getElementById('mobile-controls').style.display = 'flex';
+        });
     </script>
 </body>
 </html>
