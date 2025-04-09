@@ -1,27 +1,23 @@
-/* 移动端优先设计 */
-#music-player {
-    position: fixed;
-    bottom: 20px;
-    right: 20px;
-    background: rgba(255, 255, 255, 0.95);
-    padding: 15px;
-    border-radius: 12px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-    width: 90%;
-    max-width: 400px;
-    z-index: 1000;
+/* 移动端控制按钮样式 */
+#mobile-controls button {
+    flex: 1;
+    padding: 8px 12px;
+    border: none;
+    border-radius: 6px;
+    background: #3498db;
+    color: white;
+    cursor: pointer;
+    transition: opacity 0.2s;
 }
 
-@media (min-width: 768px) {
-    #music-player {
-        width: 320px;
-        right: 30px;
-    }
+#mobile-controls button:hover {
+    opacity: 0.9;
 }
 
-audio {
-    width: 100%;
-    margin-top: 10px;
-    background: #f8f9fa;
-    border-radius: 8px;
+#mobile-controls button:active {
+    opacity: 0.8;
+}
+
+#pause-btn {
+    background: #e74c3c;
 }
