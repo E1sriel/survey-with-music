@@ -16,11 +16,13 @@
         #song-title {
             font-weight: bold;
             margin-bottom: 10px;
+            min-height: 24px;
         }
         #music-selector {
             margin-bottom: 10px;
             width: 100%;
             padding: 5px;
+            border: 1px solid #ccc;
         }
         audio { width: 300px; }
     </style>
@@ -38,10 +40,10 @@
     <div id="music-player">
         <div id="song-title">当前播放：加载中...</div>
         <select id="music-selector">
-            <option value="assets/music/CMJ - 所念皆星河.mp3">所念皆星河</option>
-            <option value="assets/music/AniFace - 夜、萤火虫和你.mp3">夜、萤火虫和你</option>
-            <option value="assets/music/羽肿 - 花火が瞬く夜に.mp3">花火が瞬く夜に</option>
-            <option value="assets/music/凤凰院零零 - Tyndall effect (丁达尔效应).mp3">丁达尔效应</option>
+            <option value="CMJ - 所念皆星河.mp3">所念皆星河</option>
+            <option value="AniFace - 夜、萤火虫和你.mp3">夜、萤火虫和你</option>
+            <option value="羽肿 - 花火が瞬く夜に.mp3">花火が瞬く夜に</option>
+            <option value="凤凰院零零 - Tyndall effect (丁达尔效应).mp3">丁达尔效应</option>
         </select>
         <audio id="audio-player" controls loop>
             您的浏览器不支持音频播放。
@@ -49,50 +51,60 @@
     </div>
 
     <script>
-        // 核心修复部分
-        const audioPlayer = document.getElementById('audio-player');
-        const musicSelector = document.getElementById('music-selector');
+        // 确保DOM完全加载
+        document.addEventListener('DOMContentLoaded', () => {
+            const audioPlayer = document.getElementById('audio-player');
+            const musicSelector = document.getElementById('music-selector');
+            const basePath = 'assets/music/';
 
-        // 初始化加载第一个音乐
-        function initPlayer() {
-            const firstMusic = musicSelector.options[0].value;
-            audioPlayer.src = firstMusic;
-            updateSongTitle(firstMusic);
-            audioPlayer.play();
-        }
+            // 音乐文件处理函数
+            const extractSongName = (filename) => {
+                // 去除文件扩展名和解码URI组件
+                const decoded = decodeURIComponent(filename)
+                    .replace(/\.mp3$/, '')
+                    .replace(/^.* - /, '');  // 去除艺术家前缀
+                return decoded || "未知歌曲";
+            };
 
-        // 解码文件名（修复乱码问题）
-        function decodeFileName(src) {
-            return decodeURIComponent(src)                 // 解码完整URL
-                    .split('/').pop()                       // 获取文件名
-                    .replace('.mp3', '')                    // 去除扩展名
-                    .replace(/(^\S+\s-\s)/, '');            // 去除艺术家前缀
-        }
+            // 更新显示函数
+            const updateDisplay = (filename) => {
+                document.getElementById('song-title').textContent = 
+                    `当前播放：${extractSongName(filename)}`;
+            };
 
-        // 更新歌曲标题
-        function updateSongTitle(src) {
-            document.getElementById('song-title').textContent = 
-                `当前播放：${decodeFileName(src)}`;
-        }
+            // 音乐切换函数
+            const loadMusic = (filename) => {
+                audioPlayer.pause();
+                audioPlayer.src = basePath + encodeURI(filename);
+                audioPlayer.load();
+                
+                // 添加一次性事件监听确保元数据加载
+                const onLoaded = () => {
+                    updateDisplay(filename);
+                    audioPlayer.play().catch(() => {
+                        console.log('自动播放被浏览器阻止，请手动点击播放');
+                    });
+                    audioPlayer.removeEventListener('loadedmetadata', onLoaded);
+                };
+                
+                audioPlayer.addEventListener('loadedmetadata', onLoaded);
+            };
 
-        // 切换音乐功能
-        function changeMusic() {
-            const newSrc = musicSelector.value;
-            audioPlayer.pause();
-            audioPlayer.src = newSrc;
-            audioPlayer.load();
-            updateSongTitle(newSrc); // 立即更新标题
-            audioPlayer.play();
-        }
+            // 初始化加载第一个音乐
+            loadMusic(musicSelector.options[0].value);
 
-        // 事件监听
-        musicSelector.addEventListener('change', changeMusic);
-        audioPlayer.addEventListener('loadedmetadata', () => {
-            updateSongTitle(audioPlayer.src); // 双重保障更新标题
+            // 事件监听
+            musicSelector.addEventListener('change', (e) => {
+                loadMusic(e.target.value);
+            });
+
+            // 错误处理
+            audioPlayer.addEventListener('error', () => {
+                console.error('音乐加载失败，请检查文件路径:', audioPlayer.src);
+                document.getElementById('song-title').textContent = 
+                    "音乐加载失败，请刷新页面";
+            });
         });
-
-        // 初始化执行
-        initPlayer();
     </script>
 </body>
 </html>
