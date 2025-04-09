@@ -3,108 +3,95 @@
 <head>
     <meta charset="UTF-8">
     <title>问卷测试与音乐播放</title>
-    <style>
-        #music-player {
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            background: #f0f0f0;
-            padding: 15px;
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        }
-        #song-title {
-            font-weight: bold;
-            margin-bottom: 10px;
-            min-height: 24px;
-        }
-        #music-selector {
-            margin-bottom: 10px;
-            width: 100%;
-            padding: 5px;
-            border: 1px solid #ccc;
-        }
-        audio { width: 300px; }
-    </style>
+    <link rel="stylesheet" href="css/style.css">
+    <!-- 阻止favicon请求 -->
+    <link rel="icon" href="data:,">
 </head>
 <body>
-    <!-- 问卷内容 -->
-    <div style="width: 80%; margin: 0 auto;">
+    <!-- 问卷容器 -->
+    <div class="questionnaire-container">
         <iframe src="https://www.wjx.cn/vm/PpX1K07.aspx" 
                 frameborder="0" 
                 style="width:100%;height:80vh">
         </iframe>
     </div>
-    
+
     <!-- 音乐播放器 -->
     <div id="music-player">
-        <div id="song-title">当前播放：加载中...</div>
+        <div id="song-title">当前播放：请选择音乐</div>
         <select id="music-selector">
+            <option value="">-- 选择背景音乐 --</option>
             <option value="CMJ - 所念皆星河.mp3">所念皆星河</option>
             <option value="AniFace - 夜、萤火虫和你.mp3">夜、萤火虫和你</option>
             <option value="羽肿 - 花火が瞬く夜に.mp3">花火が瞬く夜に</option>
             <option value="凤凰院零零 - Tyndall effect (丁达尔效应).mp3">丁达尔效应</option>
         </select>
-        <audio id="audio-player" controls loop>
-            您的浏览器不支持音频播放。
-        </audio>
+        <audio id="audio-player" controls></audio>
     </div>
 
     <script>
-        // 确保DOM完全加载
-        document.addEventListener('DOMContentLoaded', () => {
-            const audioPlayer = document.getElementById('audio-player');
-            const musicSelector = document.getElementById('music-selector');
-            const basePath = 'assets/music/';
+        // 严格模式确保代码质量
+        'use strict';
 
-            // 音乐文件处理函数
-            const extractSongName = (filename) => {
-                // 去除文件扩展名和解码URI组件
-                const decoded = decodeURIComponent(filename)
+        // 初始化核心组件
+        const audioPlayer = document.getElementById('audio-player');
+        const musicSelector = document.getElementById('music-selector');
+        const baseMusicPath = 'assets/music/';
+
+        // 音乐加载器
+        const musicLoader = {
+            currentAudio: null,
+            
+            load: function(filename) {
+                if (!filename) return this.clear();
+
+                const fullPath = baseMusicPath + encodeURIComponent(filename);
+                const newAudio = new Audio(fullPath);
+                
+                // 卸载旧音频
+                if (this.currentAudio) {
+                    this.currentAudio.pause();
+                    this.currentAudio.removeEventListener('loadedmetadata', this.handleMetadata);
+                }
+
+                // 配置新音频
+                newAudio.loop = true;
+                newAudio.addEventListener('loadedmetadata', this.handleMetadata.bind(this, filename));
+                newAudio.addEventListener('error', this.handleError);
+                
+                this.currentAudio = newAudio;
+                audioPlayer.src = fullPath;
+            },
+
+            handleMetafunction(filename) {
+                const displayName = filename
                     .replace(/\.mp3$/, '')
-                    .replace(/^.* - /, '');  // 去除艺术家前缀
-                return decoded || "未知歌曲";
-            };
+                    .replace(/(.+?)\s*-\s*(.+)/, '$2');
+                document.getElementById('song-title').textContent = `当前播放：${displayName}`;
+                this.currentAudio.play().catch(() => {
+                    console.log('需要用户交互后才能自动播放');
+                });
+            },
 
-            // 更新显示函数
-            const updateDisplay = (filename) => {
-                document.getElementById('song-title').textContent = 
-                    `当前播放：${extractSongName(filename)}`;
-            };
+            handleError: function() {
+                document.getElementById('song-title').textContent = '音乐加载失败';
+                console.error('文件路径错误:', this.currentAudio.src);
+            },
 
-            // 音乐切换函数
-            const loadMusic = (filename) => {
-                audioPlayer.pause();
-                audioPlayer.src = basePath + encodeURI(filename);
-                audioPlayer.load();
-                
-                // 添加一次性事件监听确保元数据加载
-                const onLoaded = () => {
-                    updateDisplay(filename);
-                    audioPlayer.play().catch(() => {
-                        console.log('自动播放被浏览器阻止，请手动点击播放');
-                    });
-                    audioPlayer.removeEventListener('loadedmetadata', onLoaded);
-                };
-                
-                audioPlayer.addEventListener('loadedmetadata', onLoaded);
-            };
+            clear: function() {
+                audioPlayer.removeAttribute('src');
+                document.getElementById('song-title').textContent = '当前播放：未选择音乐';
+            }
+        };
 
-            // 初始化加载第一个音乐
-            loadMusic(musicSelector.options[0].value);
-
-            // 事件监听
-            musicSelector.addEventListener('change', (e) => {
-                loadMusic(e.target.value);
-            });
-
-            // 错误处理
-            audioPlayer.addEventListener('error', () => {
-                console.error('音乐加载失败，请检查文件路径:', audioPlayer.src);
-                document.getElementById('song-title').textContent = 
-                    "音乐加载失败，请刷新页面";
-            });
+        // 事件绑定
+        musicSelector.addEventListener('change', (e) => {
+            musicLoader.load(e.target.value);
         });
+
+        // 初始化默认音乐
+        musicSelector.value = musicSelector.options[1].value;
+        musicLoader.load(musicSelector.value);
     </script>
 </body>
 </html>
