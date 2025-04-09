@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <title>问卷测试与音乐播放</title>
     <style>
-        /* 播放器样式 */
         #music-player {
             position: fixed;
             bottom: 20px;
@@ -18,37 +17,71 @@
             font-weight: bold;
             margin-bottom: 10px;
         }
+        #music-selector {
+            margin-bottom: 10px;
+            width: 100%;
+            padding: 5px;
+        }
         audio { width: 300px; }
     </style>
 </head>
 <body>
     <!-- 问卷内容 -->
     <div style="width: 80%; margin: 0 auto;">
-        <!-- 粘贴问卷iframe代码 -->
         <iframe src="https://www.wjx.cn/vm/PpX1K07.aspx" 
                 frameborder="0" 
                 style="width:100%;height:80vh">
         </iframe>
     </div>
-
+    
     <!-- 音乐播放器 -->
     <div id="music-player">
         <div id="song-title">当前播放：加载中...</div>
+        <select id="music-selector">
+            <option value="assets/music/CMJ - 所念皆星河.mp3">所念皆星河</option>
+            <option value="assets/music/AniFace - 夜、萤火虫和你.mp3">夜、萤火虫和你</option>
+            <option value="assets/music/羽肿 - 花火が瞬く夜に.mp3">花火が瞬く夜に</option>
+            <option value="assets/music/凤凰院零零 - Tyndall effect (丁达尔效应).mp3">丁达尔效应</option>
+        </select>
         <audio id="audio-player" controls loop>
-            <source src="assets/music/CMJ - 所念皆星河.mp3" type="audio/mpeg">
             您的浏览器不支持音频播放。
         </audio>
     </div>
 
     <script>
-        // 自动显示歌曲名
         const audioPlayer = document.getElementById('audio-player');
-        audioPlayer.addEventListener('loadedmetadata', () => {
-            const fileName = audioPlayer.src.split('/').pop().replace('.mp3', '');
-            document.getElementById('song-title').textContent = `当前播放：${decodeURI(fileName)}`;
-        });
+        const musicSelector = document.getElementById('music-selector');
 
-        // 单曲循环（HTML5 loop属性已启用，此处为兼容性增强）
+        // 初始化加载第一个音乐
+        audioPlayer.src = musicSelector.value;
+        audioPlayer.play();
+
+        // 文件名处理函数
+        function extractFilename(src) {
+            return decodeURIComponent(src.split('/').pop().replace('.mp3', ''));
+        }
+
+        // 更新歌曲标题
+        function updateSongTitle(src) {
+            document.getElementById('song-title').textContent = 
+                `当前播放：${extractFilename(src)}`;
+        }
+
+        // 切换音乐
+        function changeMusic() {
+            const newSrc = musicSelector.value;
+            audioPlayer.pause();
+            audioPlayer.src = newSrc;
+            audioPlayer.load();
+            audioPlayer.play();
+            updateSongTitle(newSrc);
+        }
+
+        // 事件监听
+        musicSelector.addEventListener('change', changeMusic);
+        audioPlayer.addEventListener('loadedmetadata', () => {
+            updateSongTitle(audioPlayer.src);
+        });
         audioPlayer.addEventListener('ended', () => {
             audioPlayer.currentTime = 0;
             audioPlayer.play();
@@ -56,4 +89,3 @@
     </script>
 </body>
 </html>
-
