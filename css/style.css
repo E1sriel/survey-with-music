@@ -1,23 +1,33 @@
-/* 移动端控制按钮样式 */
+/* 跨平台控件样式 */
+#mobile-controls {
+    display: none;
+    margin-top: 12px;
+}
+
 #mobile-controls button {
     flex: 1;
-    padding: 8px 12px;
+    padding: 10px;
     border: none;
-    border-radius: 6px;
+    border-radius: 8px;
     background: #3498db;
     color: white;
     cursor: pointer;
-    transition: opacity 0.2s;
-}
-
-#mobile-controls button:hover {
-    opacity: 0.9;
+    transition: transform 0.1s;
 }
 
 #mobile-controls button:active {
-    opacity: 0.8;
+    transform: scale(0.95);
 }
 
 #pause-btn {
     background: #e74c3c;
+}
+
+@media (max-width: 768px) {
+    #mobile-controls {
+        display: flex;
+    }
+    audio {
+        display: none;
+    }
 }
